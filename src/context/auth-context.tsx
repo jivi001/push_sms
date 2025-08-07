@@ -3,6 +3,7 @@
 import React, { createContext, useState, useEffect, useCallback } from "react";
 import { type User, type Role } from "@/lib/types";
 import { useRouter } from "next/navigation";
+import { requestFcmToken } from "@/lib/firebase-config";
 
 const MOCK_USERS: Record<string, Omit<User, 'uid' | 'email'>> = {
   'teacher@example.com': { name: 'John Doe', role: 'teacher' },
@@ -38,6 +39,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const handleFcmToken = async (currentUser: User) => {
+    const fcmToken = await requestFcmToken();
+    if (fcmToken && fcmToken !== currentUser.fcmToken) {
+        // In a real app, you would save this token to Firestore/your backend
+        // associated with the user.
+        console.log("New FCM Token:", fcmToken);
+        const updatedUser = { ...currentUser, fcmToken };
+        setUser(updatedUser);
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+    }
+  };
+
   const login = async (email: string): Promise<boolean> => {
     setLoading(true);
     return new Promise(resolve => {
@@ -51,6 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
           setUser(newUser);
           localStorage.setItem("user", JSON.stringify(newUser));
+          handleFcmToken(newUser); // Request permission and get token after login
           router.push("/dashboard");
           resolve(true);
         } else {
@@ -83,6 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         setUser(newUser);
         localStorage.setItem("user", JSON.stringify(newUser));
+        handleFcmToken(newUser);
       }
     }
   }, [user]);
