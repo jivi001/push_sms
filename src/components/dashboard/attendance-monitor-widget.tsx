@@ -34,8 +34,9 @@ export function AttendanceMonitorWidget() {
       console.error("Failed to trigger attendance check:", error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Could not trigger the attendance check.",
+        title: "AI Task Failed",
+        description:
+          "Failed to send attendance reminders. Please try again later.",
       });
     } finally {
       setLoading(false);
