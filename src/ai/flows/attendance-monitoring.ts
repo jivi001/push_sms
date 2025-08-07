@@ -11,6 +11,17 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import {fcmService} from "@/services/fcm-service";
+import type { User } from '@/lib/types';
+
+// Mock database of teachers and their schedules
+const MOCK_TEACHERS: (User & {schedule: {[hour: number]: {className: string, subject: string}}, fcmToken?: string})[] = [
+    { uid: '1', name: 'Alice Williams', email: 'teacher@example.com', role: 'teacher', fcmToken: 'mock-fcm-token-for-alice', schedule: { 9: {className: "Grade 10 - A", subject: "Mathematics"}, 14: {className: "Grade 11 - B", subject: "Algebra"} } },
+    { uid: '2', name: 'Bob Johnson', email: 'teacher2@example.com', role: 'teacher', fcmToken: 'mock-fcm-token-for-bob', schedule: { 10: {className: "Grade 8 - C", subject: "History"}, 15: {className: "Grade 9 - A", subject: "Geography"} } },
+    { uid: '3', name: 'Charlie Brown', email: 'teacher3@example.com', role: 'teacher', schedule: { 11: {className: "Grade 12 - B", subject: "Physics"} } }, // No FCM token
+    { uid: '4', name: 'Diana Prince', email: 'teacher4@example.com', role: 'teacher', fcmToken: 'mock-fcm-token-for-diana', schedule: { 9: {className: "Grade 9 - D", subject: "English"} } },
+    { uid: '5', name: 'Eve Adams', email: 'teacher5@example.com', role: 'teacher', fcmToken: 'mock-fcm-token-for-eve', schedule: { 9: {className: "Grade 11 - C", subject: "Chemistry"} } },
+];
+
 
 const CheckAttendanceAndSendRemindersInputSchema = z.object({
   date: z.string().describe('The date to check attendance for (YYYY-MM-DD).'),
@@ -34,18 +45,35 @@ const checkAttendanceAndSendRemindersFlow = ai.defineFlow(
     outputSchema: CheckAttendanceAndSendRemindersOutputSchema,
   },
   async input => {
-    const { date, hour } = input;
-    const dateHourFormat = `${date}-${hour}`
+    const { hour } = input;
 
-    // Use Firebase Admin SDK to query Firestore for missing attendance.
-    // This part is assumed to be implemented in the cloud function.
-    // The flow will return the number of reminders that SHOULD be sent.
-    // In reality the reminder will be sent from the cloud function.
+    // In a real app, you would query your database (e.g., Firestore) to find teachers 
+    // who have a class scheduled for the current hour but haven't submitted attendance.
+    
+    // For this demo, we'll find all teachers who have a class scheduled for the given hour.
+    // We'll pretend none of them have submitted attendance yet.
+    const teachersToRemind = MOCK_TEACHERS.filter(t => t.schedule[hour]);
 
-    // TODO: Add firebase admin SDK to the project.
+    if (!teachersToRemind.length) {
+      return { remindersSent: 0 };
+    }
 
-    const reminderCount = 5; // dummy number
+    let remindersSentCount = 0;
+    
+    for (const teacher of teachersToRemind) {
+        if (teacher.fcmToken) {
+            const { className, subject } = teacher.schedule[hour];
+            const title = "Attendance Reminder";
+            const body = `Please submit attendance for ${subject} in ${className}.`;
+            
+            const success = await fcmService.sendFcmMessage(teacher.fcmToken, title, body);
+            
+            if (success) {
+                remindersSentCount++;
+            }
+        }
+    }
 
-    return { remindersSent: reminderCount };
+    return { remindersSent: remindersSentCount };
   }
 );
