@@ -36,7 +36,7 @@ export function AttendanceMonitorWidget() {
         variant: "destructive",
         title: "AI Task Failed",
         description:
-          "Failed to send attendance reminders. Please try again later.",
+          "There was an issue sending attendance reminders. The AI model may be temporarily unavailable. Please try again later.",
       });
     } finally {
       setLoading(false);
